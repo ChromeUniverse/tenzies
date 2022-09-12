@@ -2,20 +2,25 @@ import React from 'react'
 
 function Die(props) {
 
-  const style = {
-    backgroundColor: props.isHeld ? '#59E391' : '#FFFFFF'
-  };
-
-
   let dots = [];
   for (let i = 1; i <= props.value; i++) {
-    dots.push(<div className={`die-dot die-dot-${i}`}></div>)
+    dots.push(
+      <div
+        // had to add list key here cause React wouldn't shut up
+        key={props.id + `die-dot-${i}`}
+        className={`die-dot die-dot-${i}`}
+      ></div>
+    );
   }
 
   return (
     <div
-      className={`die die-${props.value}`}
-      style={style}
+      className={`
+        die
+        die-${props.value} 
+        ${props.unclickable ? "die-grayed" : ""} 
+        ${props.isHeld ? "die-green" : ""}
+      `}
       onClick={() => props.hold(props.id)}
     >
       {dots}

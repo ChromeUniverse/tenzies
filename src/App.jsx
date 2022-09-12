@@ -5,7 +5,7 @@ import Confetti from "react-confetti";
 
 function App() {
 
-  const [tenzies, setTenzies] = useState(false);
+  const [gameState, setGameState] = useState(0);
   const [PBtime, setPBtime] = useState(Number(localStorage.getItem('pb')));
   const [time, setTime] = useState(0);
   const [dice, setDice] = useState(allNewDice());
@@ -14,19 +14,26 @@ function App() {
   // timer
   useEffect(() => {
     let interval = setInterval(() => {
-      if (!tenzies) setTime(oldTime => oldTime + 1);
+      if (gameState === 1) setTime(oldTime => oldTime + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [tenzies]);
+  }, [gameState]);
 
   // endgame
   useEffect(() => {
-    let value = dice[0].value;
+
+    if (gameState !== 1) return;              // only run checks if game is running
+
+    const firstValue = dice[0].value;
     for (const die of dice) {
-      if (!die.isHeld) return;          // all dice must be held
-      if (die.value !== value) return;  // the value of all held dice must be the same
+      if (!die.isHeld) return;                // all dice must be held
+      if (die.value !== firstValue) return;   // the value of all held dice must be the same
     }
-    setTenzies(true);    
+
+    
+    setGameState(2);                          // move to endgame state
+    
+    // record new personal best time
     setPBtime(oldPBtime => {
       const newPBtime = oldPBtime == 0 ? time : Math.min(oldPBtime, time)
       localStorage.setItem('pb', newPBtime.toString());
@@ -56,6 +63,7 @@ function App() {
   }
 
   function hold(id) {
+    if (gameState !== 1) return;
     setDice((oldDice) =>
       oldDice.map((oldDie) =>
         oldDie.id === id ? { ...oldDie, isHeld: !oldDie.isHeld } : oldDie
@@ -64,23 +72,37 @@ function App() {
   }
 
   function clickHandler() {
-    if (tenzies) {
+    if (gameState === 0) {      
+      setGameState(1);
+    } else if (gameState === 1) {
+      rollDice();
+    } else if (gameState === 2) {
+      setGameState(0);
       setDice(allNewDice());
-      setTenzies(false);
       setRolls(0);
       setTime(0);
-    } else {
-      rollDice();
     }
   }
 
   const diceElements = dice.map((die) => (
-    <Die key={die.id} id={die.id} value={die.value} isHeld={die.isHeld} hold={hold} />
+    <Die
+      key={die.id}
+      id={die.id}
+      value={die.value}
+      isHeld={die.isHeld}
+      unclickable={gameState !== 1}
+      hold={hold}
+    />
   ));
+
+  let btnText;
+  if (gameState === 0) btnText = 'Start';
+  else if (gameState === 1) btnText = 'Roll';
+  else if (gameState === 2) btnText = 'New Game';
 
   return (
     <main className="main">
-      {tenzies && <Confetti />}
+      {gameState === 2 && <Confetti />}
       <h1 className="title">Tenzies</h1>
       <p className="instructions">
         Roll until all dice are the same. Click each die to freeze it at its
@@ -99,7 +121,7 @@ function App() {
       </div>
       <div className="dice-container">{diceElements}</div>
       <button className="btn" onClick={clickHandler}>
-        {tenzies ? "New Game" : "Roll"}
+        {btnText}
       </button>
     </main>
   );
